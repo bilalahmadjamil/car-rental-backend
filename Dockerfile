@@ -19,6 +19,9 @@ RUN npx prisma generate
 # Build the application
 RUN npm run build
 
+# Debug: List contents of dist folder
+RUN ls -la dist/
+
 # Remove dev dependencies to reduce image size
 RUN npm prune --production
 
