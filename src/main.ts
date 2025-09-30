@@ -16,8 +16,15 @@ async function bootstrap() {
   app.use(compression());
 
   // CORS configuration
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'https://khan-car-rental.vercel.app',
+    configService.get('CORS_ORIGIN')
+  ].filter(Boolean);
+
   app.enableCors({
-    origin: configService.get('CORS_ORIGIN') || 'http://localhost:3001',
+    origin: allowedOrigins,
     credentials: true,
   });
 
