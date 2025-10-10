@@ -72,11 +72,10 @@ import { StripeConfig } from './config/stripe.config';
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
     },
-    // Temporarily disable JWT guard for debugging
-    // {
-    //   provide: APP_GUARD,
-    //   useClass: JwtAuthGuard,
-    // },
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
   ],
 })
 export class AppModule {}
