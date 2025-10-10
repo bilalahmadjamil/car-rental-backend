@@ -16,7 +16,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { VehiclesModule } from './modules/vehicles/vehicles.module';
-// import { BookingsModule } from './modules/bookings/bookings.module';
+import { BookingsModule } from './modules/bookings/bookings.module';
 // import { PaymentsModule } from './modules/payments/payments.module';
 // import { AnalyticsModule } from './modules/analytics/analytics.module';
 // import { AdminModule } from './modules/admin/admin.module';
@@ -24,6 +24,7 @@ import { VehiclesModule } from './modules/vehicles/vehicles.module';
 
 // Guards
 import { ThrottlerGuard } from '@nestjs/throttler';
+import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 
 // Configuration
 import { JwtConfig } from './config/jwt.config';
@@ -58,7 +59,7 @@ import { StripeConfig } from './config/stripe.config';
     AuthModule,
     UsersModule,
     VehiclesModule,
-    // BookingsModule,
+    BookingsModule,
     // PaymentsModule,
     // AnalyticsModule,
     // AdminModule,
@@ -70,6 +71,10 @@ import { StripeConfig } from './config/stripe.config';
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
     },
   ],
 })

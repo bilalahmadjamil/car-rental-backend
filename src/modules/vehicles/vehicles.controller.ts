@@ -110,6 +110,9 @@ export class VehiclesController {
     @Query('search') search?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('sortBy') sortBy?: string,
   ) {
     const filters: any = {};
     if (categoryId) filters.categoryId = categoryId;
@@ -119,13 +122,39 @@ export class VehiclesController {
     if (search) filters.search = search;
     if (page) filters.page = parseInt(page, 10);
     if (limit) filters.limit = parseInt(limit, 10);
+    if (startDate) filters.startDate = startDate;
+    if (endDate) filters.endDate = endDate;
+    if (sortBy) filters.sortBy = sortBy;
 
     return this.vehiclesService.findAllVehicles(filters);
   }
 
+  @Public()
   @Get(':id')
   findOneVehicle(@Param('id') id: string) {
     return this.vehiclesService.findOneVehicle(id);
+  }
+
+  @Public()
+  @Get('test/availability')
+  testAvailability(
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+  ) {
+    return this.vehiclesService.findAllVehicles({
+      startDate,
+      endDate,
+      isActive: true
+    });
+  }
+
+  @Public()
+  @Get('test/rentals')
+  async testRentals(
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+  ) {
+    return this.vehiclesService.getRentalsForDateRange(startDate, endDate);
   }
 
   @Patch(':id')

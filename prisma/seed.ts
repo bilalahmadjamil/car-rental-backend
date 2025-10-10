@@ -90,6 +90,32 @@ async function main() {
     role: customer.role,
   });
 
+  // Create guest user for guest bookings
+  const guestUser = await prisma.user.upsert({
+    where: { email: 'guest@alifdrives.com' },
+    update: {},
+    create: {
+      email: 'guest@alifdrives.com',
+      passwordHash: await bcrypt.hash('guest123', 12),
+      firstName: 'Guest',
+      lastName: 'User',
+      phone: '+61400000000',
+      address: 'Guest Address',
+      licenseNumber: 'GUEST123456',
+      role: 'CUSTOMER',
+      customerTier: 'BRONZE',
+      registrationSource: 'seed',
+      isActive: true,
+    },
+  });
+
+  console.log('✅ Guest user created:', {
+    id: guestUser.id,
+    email: guestUser.email,
+    name: `${guestUser.firstName} ${guestUser.lastName}`,
+    role: guestUser.role,
+  });
+
   console.log('🎉 Database seeding completed successfully!');
   console.log('\n📋 Test Credentials:');
   console.log('┌─────────────────────────────────────────────────────────┐');

@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsBoolean, IsNumber, IsEnum, IsArray } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsNumber, IsEnum, IsArray, IsNotEmpty } from 'class-validator';
 
 export enum VehicleType {
   RENTAL = 'rental',
@@ -17,9 +17,11 @@ export class CreateVehicleDto {
   year: number;
 
   @IsString()
+  @IsNotEmpty()
   categoryId: string;
 
   @IsString()
+  @IsNotEmpty()
   subcategoryId: string;
 
   @IsEnum(VehicleType)
@@ -28,6 +30,10 @@ export class CreateVehicleDto {
   @IsOptional()
   @IsNumber()
   dailyRate?: number;
+
+  @IsOptional()
+  @IsNumber()
+  weeklyRate?: number;
 
   @IsOptional()
   @IsNumber()

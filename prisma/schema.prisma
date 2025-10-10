@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,7 +7,448 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Enums
+model User {
+  id                 String             @id @default(uuid())
+  email              String             @unique
+  passwordHash       String             @map("password_hash")
+  firstName          String             @map("first_name")
+  lastName           String             @map("last_name")
+  phone              String?
+  address            String?
+  licenseNumber      String?            @map("license_number")
+  role               UserRole           @default(CUSTOMER)
+  customerTier       CustomerTier       @default(BRONZE) @map("customer_tier")
+  totalSpent         Decimal            @default(0) @map("total_spent")
+  loyaltyPoints      Int                @default(0) @map("loyalty_points")
+  registrationSource String?            @map("registration_source")
+  lastLoginAt        DateTime?          @map("last_login_at")
+  isActive           Boolean            @default(true) @map("is_active")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+  auditLogs          AuditLog[]
+  contracts          Contract[]
+  customerAnalytics  CustomerAnalytics?
+  notifications      Notification[]
+  paymentMethods     PaymentMethod[]
+  rentals            Rental[]
+  sales              Sale[]
+  transactions       Transaction[]
+
+  @@map("users")
+}
+
+model AdminUser {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  passwordHash String     @map("password_hash")
+  firstName    String     @map("first_name")
+  lastName     String     @map("last_name")
+  role         AdminRole
+  permissions  String     @default("{}")
+  isActive     Boolean    @default(true) @map("is_active")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+  auditLogs    AuditLog[]
+  refunds      Refund[]
+
+  @@map("admin_users")
+}
+
+model VehicleLocation {
+  id               String             @id @default(uuid())
+  name             String
+  address          String
+  city             String
+  state            String
+  postcode         String
+  phone            String?
+  email            String?
+  isActive         Boolean            @default(true) @map("is_active")
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+  revenueAnalytics RevenueAnalytics[]
+  vehicles         Vehicle[]
+
+  @@map("vehicle_locations")
+}
+
+model Vehicle {
+  id                 String             @id @default(uuid())
+  make               String
+  model              String
+  year               Int
+  categoryId         String?            @map("category_id")
+  subcategoryId      String?            @map("subcategory_id")
+  type               String             @default("rental")
+  dailyRate          Decimal?           @map("daily_rate")
+  weeklyRate         Decimal?           @map("weekly_rate")
+  salePrice          Decimal?           @map("sale_price")
+  description        String?
+  features           String             @default("[]")
+  images             String             @default("[]")
+  isActive           Boolean            @default(true) @map("is_active")
+  color              String?
+  mileage            Int?
+  fuelType           FuelType?          @map("fuel_type")
+  transmission       Transmission?
+  seats              Int?
+  status             VehicleStatus      @default(AVAILABLE)
+  locationId         String?            @map("location_id")
+  registration       String?            @unique
+  insuranceExcess    Decimal?           @map("insurance_excess")
+  deposit            Decimal?
+  purchaseCost       Decimal?           @map("purchase_cost")
+  totalRentalRevenue Decimal            @default(0) @map("total_rental_revenue")
+  totalRentalDays    Int                @default(0) @map("total_rental_days")
+  popularityScore    Decimal            @default(0) @map("popularity_score")
+  maintenanceCost    Decimal            @default(0) @map("maintenance_cost")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+  rentalPricing      RentalPricing[]
+  rentals            Rental[]
+  revenueAnalytics   RevenueAnalytics[]
+  salePricing        SalePricing[]
+  sales              Sale[]
+  vehicleAnalytics   VehicleAnalytics?
+  vehicleCategories  VehicleCategory[]
+  location           VehicleLocation?   @relation(fields: [locationId], references: [id])
+  subcategory        Subcategory?       @relation(fields: [subcategoryId], references: [id])
+  category           Category?          @relation(fields: [categoryId], references: [id])
+
+  @@map("vehicles")
+}
+
+model Category {
+  id                String            @id @default(uuid())
+  name              String
+  description       String?
+  icon              String?           @default("Car")
+  color             String?           @default("blue")
+  type              CategoryType
+  isActive          Boolean           @default(true) @map("is_active")
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+  subcategories     Subcategory[]
+  vehicleCategories VehicleCategory[]
+  vehicles          Vehicle[]
+
+  @@map("categories")
+}
+
+model Subcategory {
+  id          String    @id @default(uuid())
+  categoryId  String    @map("category_id")
+  name        String
+  description String?
+  sortOrder   Int       @default(0) @map("sort_order")
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  category    Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  vehicles    Vehicle[]
+
+  @@map("subcategories")
+}
+
+model VehicleCategory {
+  vehicleId  String   @map("vehicle_id")
+  categoryId String   @map("category_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  vehicle    Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@id([vehicleId, categoryId])
+  @@map("vehicle_categories")
+}
+
+model Rental {
+  id                 String        @id @default(uuid())
+  userId             String?       @map("user_id")
+  vehicleId          String        @map("vehicle_id")
+  startDate          DateTime      @map("start_date")
+  endDate            DateTime      @map("end_date")
+  totalPrice         Decimal       @map("total_price")
+  status             RentalStatus  @default(PENDING)
+  paymentStatus      PaymentStatus @default(PENDING) @map("payment_status")
+  paymentMethod      String?       @map("payment_method")
+  contractSigned     Boolean       @default(false) @map("contract_signed")
+  guestInfo          String?       @map("guest_info")
+  cancellationReason String?       @map("cancellation_reason")
+  cancelledAt        DateTime?     @map("cancelled_at")
+  cancelledBy        String?       @map("cancelled_by")
+  createdAt          DateTime      @default(now()) @map("created_at")
+  updatedAt          DateTime      @updatedAt @map("updated_at")
+  contract           Contract?
+  vehicle            Vehicle       @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  user               User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions       Transaction[]
+
+  @@map("rentals")
+}
+
+model Sale {
+  id                 String        @id @default(uuid())
+  userId             String?       @map("user_id")
+  vehicleId          String        @map("vehicle_id")
+  salePrice          Decimal       @map("sale_price")
+  status             SaleStatus    @default(PENDING)
+  paymentStatus      PaymentStatus @default(PENDING) @map("payment_status")
+  paymentMethod      String?       @map("payment_method")
+  contractSigned     Boolean       @default(false) @map("contract_signed")
+  guestInfo          String?       @map("guest_info")
+  cancellationReason String?       @map("cancellation_reason")
+  cancelledAt        DateTime?     @map("cancelled_at")
+  cancelledBy        String?       @map("cancelled_by")
+  createdAt          DateTime      @default(now()) @map("created_at")
+  updatedAt          DateTime      @updatedAt @map("updated_at")
+  contract           Contract?
+  vehicle            Vehicle       @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  user               User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions       Transaction[]
+
+  @@map("sales")
+}
+
+model RentalPricing {
+  id            String    @id @default(uuid())
+  vehicleId     String    @map("vehicle_id")
+  pricePerDay   Decimal   @map("price_per_day")
+  pricePerWeek  Decimal   @map("price_per_week")
+  pricePerMonth Decimal   @map("price_per_month")
+  validFrom     DateTime  @map("valid_from")
+  validTo       DateTime? @map("valid_to")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  vehicle       Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@map("rental_pricing")
+}
+
+model SalePricing {
+  id        String    @id @default(uuid())
+  vehicleId String    @map("vehicle_id")
+  salePrice Decimal   @map("sale_price")
+  validFrom DateTime  @map("valid_from")
+  validTo   DateTime? @map("valid_to")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  vehicle   Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@map("sale_pricing")
+}
+
+model PaymentMethod {
+  id                     String        @id @default(uuid())
+  userId                 String        @map("user_id")
+  gatewayProvider        String        @map("gateway_provider")
+  gatewayPaymentMethodId String        @map("gateway_payment_method_id")
+  type                   String
+  cardBrand              String?       @map("card_brand")
+  cardLastFour           String?       @map("card_last_four")
+  cardExpMonth           Int?          @map("card_exp_month")
+  cardExpYear            Int?          @map("card_exp_year")
+  bankName               String?       @map("bank_name")
+  isDefault              Boolean       @default(false) @map("is_default")
+  isActive               Boolean       @default(true) @map("is_active")
+  metadata               String        @default("{}")
+  createdAt              DateTime      @default(now()) @map("created_at")
+  updatedAt              DateTime      @updatedAt @map("updated_at")
+  user                   User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions           Transaction[]
+
+  @@map("payment_methods")
+}
+
+model Transaction {
+  id                     String               @id @default(uuid())
+  transactionId          String               @unique @map("transaction_id")
+  userId                 String               @map("user_id")
+  rentalId               String?              @map("rental_id")
+  saleId                 String?              @map("sale_id")
+  type                   TransactionType
+  status                 TransactionStatus    @default(PENDING)
+  amount                 Decimal
+  currency               String               @default("AUD")
+  gatewayProvider        String               @map("gateway_provider")
+  gatewayTransactionId   String?              @map("gateway_transaction_id")
+  gatewayPaymentIntentId String?              @map("gateway_payment_intent_id")
+  gatewayChargeId        String?              @map("gateway_charge_id")
+  paymentMethodType      String?              @map("payment_method_type")
+  paymentMethodId        String?              @map("payment_method_id")
+  cardLastFour           String?              @map("card_last_four")
+  cardBrand              String?              @map("card_brand")
+  cardExpMonth           Int?                 @map("card_exp_month")
+  cardExpYear            Int?                 @map("card_exp_year")
+  subtotal               Decimal
+  taxAmount              Decimal              @default(0) @map("tax_amount")
+  processingFee          Decimal              @default(0) @map("processing_fee")
+  totalAmount            Decimal              @map("total_amount")
+  gatewayResponse        String?              @map("gateway_response")
+  gatewayMetadata        String?              @map("gateway_metadata")
+  failureReason          String?              @map("failure_reason")
+  failureCode            String?              @map("failure_code")
+  processedAt            DateTime?            @map("processed_at")
+  createdAt              DateTime             @default(now()) @map("created_at")
+  updatedAt              DateTime             @updatedAt @map("updated_at")
+  refunds                Refund[]
+  transactionHistory     TransactionHistory[]
+  paymentMethod          PaymentMethod?       @relation(fields: [paymentMethodId], references: [id])
+  sale                   Sale?                @relation(fields: [saleId], references: [id])
+  rental                 Rental?              @relation(fields: [rentalId], references: [id])
+  user                   User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("transactions")
+}
+
+model TransactionHistory {
+  id              String            @id @default(uuid())
+  transactionId   String            @map("transaction_id")
+  status          TransactionStatus
+  amount          Decimal?
+  gatewayResponse String?           @map("gateway_response")
+  notes           String?
+  createdBy       String?           @map("created_by")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  transaction     Transaction       @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@map("transaction_history")
+}
+
+model Refund {
+  id              String       @id @default(uuid())
+  transactionId   String       @map("transaction_id")
+  refundId        String       @unique @map("refund_id")
+  amount          Decimal
+  reason          String
+  status          RefundStatus @default(PENDING)
+  gatewayRefundId String?      @map("gateway_refund_id")
+  gatewayResponse String?      @map("gateway_response")
+  failureReason   String?      @map("failure_reason")
+  requestedBy     String       @map("requested_by")
+  approvedBy      String?      @map("approved_by")
+  approvedAt      DateTime?    @map("approved_at")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+  adminUser       AdminUser?   @relation(fields: [approvedBy], references: [id])
+  transaction     Transaction  @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@map("refunds")
+}
+
+model Contract {
+  id        String    @id @default(uuid())
+  rentalId  String?   @unique @map("rental_id")
+  saleId    String?   @unique @map("sale_id")
+  terms     String
+  signedAt  DateTime? @map("signed_at")
+  signedBy  String    @map("signed_by")
+  filePath  String?   @map("file_path")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  user      User      @relation(fields: [signedBy], references: [id])
+  sale      Sale?     @relation(fields: [saleId], references: [id])
+  rental    Rental?   @relation(fields: [rentalId], references: [id])
+
+  @@map("contracts")
+}
+
+model CustomerAnalytics {
+  id                    String    @id @default(uuid())
+  userId                String    @unique @map("user_id")
+  totalBookings         Int       @default(0) @map("total_bookings")
+  totalSpent            Decimal   @default(0) @map("total_spent")
+  averageBookingValue   Decimal   @default(0) @map("average_booking_value")
+  lastBookingDate       DateTime? @map("last_booking_date")
+  customerLifetimeValue Decimal   @default(0) @map("customer_lifetime_value")
+  churnRiskScore        Decimal   @default(0) @map("churn_risk_score")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("customer_analytics")
+}
+
+model VehicleAnalytics {
+  id                      String   @id @default(uuid())
+  vehicleId               String   @unique @map("vehicle_id")
+  utilizationRate         Decimal  @default(0) @map("utilization_rate")
+  revenuePerDay           Decimal  @default(0) @map("revenue_per_day")
+  maintenanceFrequency    Int      @default(0) @map("maintenance_frequency")
+  customerRatingAvg       Decimal  @default(0) @map("customer_rating_avg")
+  bookingCancellationRate Decimal  @default(0) @map("booking_cancellation_rate")
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @updatedAt @map("updated_at")
+  vehicle                 Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@map("vehicle_analytics")
+}
+
+model RevenueAnalytics {
+  id            String           @id @default(uuid())
+  date          DateTime
+  rentalRevenue Decimal          @default(0) @map("rental_revenue")
+  salesRevenue  Decimal          @default(0) @map("sales_revenue")
+  totalRevenue  Decimal          @default(0) @map("total_revenue")
+  vehicleId     String?          @map("vehicle_id")
+  locationId    String?          @map("location_id")
+  createdAt     DateTime         @default(now()) @map("created_at")
+  location      VehicleLocation? @relation(fields: [locationId], references: [id])
+  vehicle       Vehicle?         @relation(fields: [vehicleId], references: [id])
+
+  @@map("revenue_analytics")
+}
+
+model FinancialAnalytics {
+  id                     String   @id @default(uuid())
+  date                   DateTime
+  periodType             String   @map("period_type")
+  totalRevenue           Decimal  @default(0) @map("total_revenue")
+  rentalRevenue          Decimal  @default(0) @map("rental_revenue")
+  salesRevenue           Decimal  @default(0) @map("sales_revenue")
+  refundAmount           Decimal  @default(0) @map("refund_amount")
+  netRevenue             Decimal  @default(0) @map("net_revenue")
+  totalTransactions      Int      @default(0) @map("total_transactions")
+  successfulTransactions Int      @default(0) @map("successful_transactions")
+  failedTransactions     Int      @default(0) @map("failed_transactions")
+  refundedTransactions   Int      @default(0) @map("refunded_transactions")
+  cardPayments           Decimal  @default(0) @map("card_payments")
+  bankTransferPayments   Decimal  @default(0) @map("bank_transfer_payments")
+  bnplPayments           Decimal  @default(0) @map("bnpl_payments")
+  totalProcessingFees    Decimal  @default(0) @map("total_processing_fees")
+  stripeFees             Decimal  @default(0) @map("stripe_fees")
+  createdAt              DateTime @default(now()) @map("created_at")
+
+  @@map("financial_analytics")
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String           @map("user_id")
+  type      NotificationType
+  title     String
+  message   String
+  isRead    Boolean          @default(false) @map("is_read")
+  createdAt DateTime         @default(now()) @map("created_at")
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model AuditLog {
+  id        String     @id @default(uuid())
+  userId    String?    @map("user_id")
+  adminId   String?    @map("admin_id")
+  action    String
+  entity    String
+  entityId  String     @map("entity_id")
+  details   String
+  createdAt DateTime   @default(now()) @map("created_at")
+  adminUser AdminUser? @relation(fields: [adminId], references: [id])
+  user      User?      @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
+
 enum UserRole {
   CUSTOMER
   ADMIN
@@ -115,480 +553,4 @@ enum NotificationType {
   RETURN_REMINDER
   REFUND_PROCESSED
   SYSTEM_NOTIFICATION
-}
-
-// Core Models
-model User {
-  id                String      @id @default(uuid())
-  email             String      @unique
-  passwordHash      String      @map("password_hash")
-  firstName         String      @map("first_name")
-  lastName          String      @map("last_name")
-  phone             String?
-  address           String?
-  licenseNumber     String?     @map("license_number")
-  role              UserRole    @default(CUSTOMER)
-  customerTier      CustomerTier @default(BRONZE) @map("customer_tier")
-  totalSpent        Decimal     @default(0) @map("total_spent") 
-  loyaltyPoints     Int         @default(0) @map("loyalty_points")
-  registrationSource String?    @map("registration_source")
-  lastLoginAt       DateTime?   @map("last_login_at") 
-  isActive          Boolean     @default(true) @map("is_active")
-  createdAt         DateTime    @default(now()) @map("created_at")
-  updatedAt         DateTime    @updatedAt @map("updated_at")
-
-  // Relations
-  rentals           Rental[]
-  sales             Sale[]
-  paymentMethods    PaymentMethod[]
-  transactions      Transaction[]
-  customerAnalytics CustomerAnalytics?
-  notifications     Notification[]
-  auditLogs         AuditLog[]
-  contracts         Contract[]
-
-  @@map("users")
-}
-
-model AdminUser {
-  id          String    @id @default(uuid())
-  email       String    @unique
-  passwordHash String   @map("password_hash")
-  firstName   String    @map("first_name")
-  lastName    String    @map("last_name")
-  role        AdminRole
-  permissions String      @default("{}")
-  isActive    Boolean   @default(true) @map("is_active")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
-
-  // Relations
-  auditLogs   AuditLog[]
-  refunds     Refund[]
-
-  @@map("admin_users")
-}
-
-model VehicleLocation {
-  id        String   @id @default(uuid())
-  name      String
-  address   String
-  city      String
-  state     String
-  postcode  String
-  phone     String?
-  email     String?
-  isActive  Boolean  @default(true) @map("is_active")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  // Relations
-  vehicles        Vehicle[]
-  revenueAnalytics RevenueAnalytics[]
-
-  @@map("vehicle_locations")
-}
-
-model Vehicle {
-  id                    String        @id @default(uuid())
-  make                  String
-  model                 String
-  year                  Int
-  categoryId            String?       @map("category_id")
-  subcategoryId         String?       @map("subcategory_id")
-  type                  String        @default("rental") // rental, sale, both
-  dailyRate             Decimal?      @map("daily_rate")
-  salePrice             Decimal?      @map("sale_price")
-  description           String?
-  features              String        @default("[]")
-  images                String        @default("[]")
-  isActive              Boolean       @default(true) @map("is_active")
-  color                 String?
-  mileage               Int?
-  fuelType              FuelType?     @map("fuel_type")
-  transmission          Transmission?
-  seats                 Int?
-  status                VehicleStatus @default(AVAILABLE)
-  locationId            String?       @map("location_id")
-  registration          String?       @unique
-  insuranceExcess       Decimal?      @map("insurance_excess") 
-  deposit               Decimal?      
-  purchaseCost          Decimal?      @map("purchase_cost") 
-  totalRentalRevenue    Decimal       @default(0) @map("total_rental_revenue") 
-  totalRentalDays       Int           @default(0) @map("total_rental_days")
-  popularityScore       Decimal       @default(0) @map("popularity_score") 
-  maintenanceCost       Decimal       @default(0) @map("maintenance_cost") 
-  createdAt             DateTime      @default(now()) @map("created_at")
-  updatedAt             DateTime      @updatedAt @map("updated_at")
-
-  // Relations
-  category              Category?     @relation(fields: [categoryId], references: [id])
-  subcategory           Subcategory?  @relation(fields: [subcategoryId], references: [id])
-  location              VehicleLocation? @relation(fields: [locationId], references: [id])
-  rentals               Rental[]
-  sales                 Sale[]
-  vehicleCategories     VehicleCategory[]
-  rentalPricing         RentalPricing[]
-  salePricing           SalePricing[]
-  vehicleAnalytics      VehicleAnalytics?
-  revenueAnalytics      RevenueAnalytics[]
-
-  @@map("vehicles")
-}
-
-model Category {
-  id          String      @id @default(uuid())
-  name        String
-  description String?
-  icon        String?     @default("Car")
-  color       String?     @default("blue")
-  type        CategoryType
-  isActive    Boolean     @default(true) @map("is_active")
-  createdAt   DateTime    @default(now()) @map("created_at")
-  updatedAt   DateTime    @updatedAt @map("updated_at")
-
-  // Relations
-  subcategories   Subcategory[]
-  vehicles        Vehicle[]
-  vehicleCategories VehicleCategory[]
-
-  @@map("categories")
-}
-
-model Subcategory {
-  id          String   @id @default(uuid())
-  categoryId  String   @map("category_id")
-  name        String
-  description String?
-  sortOrder   Int      @default(0) @map("sort_order")
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
-  // Relations
-  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  vehicles    Vehicle[]
-
-  @@map("subcategories")
-}
-
-model VehicleCategory {
-  vehicleId  String   @map("vehicle_id")
-  categoryId String   @map("category_id")
-  createdAt  DateTime @default(now()) @map("created_at")
-
-  // Relations
-  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-  category  Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-
-  @@id([vehicleId, categoryId])
-  @@map("vehicle_categories")
-}
-
-model Rental {
-  id            String        @id @default(uuid())
-  userId        String        @map("user_id")
-  vehicleId     String        @map("vehicle_id")
-  startDate     DateTime      @map("start_date") 
-  endDate       DateTime      @map("end_date") 
-  totalPrice    Decimal       @map("total_price") 
-  status        RentalStatus  @default(PENDING)
-  paymentStatus PaymentStatus @map("payment_status") @default(PENDING)
-  paymentMethod String?       @map("payment_method")
-  contractSigned Boolean      @default(false) @map("contract_signed")
-  createdAt     DateTime      @default(now()) @map("created_at")
-  updatedAt     DateTime      @updatedAt @map("updated_at")
-
-  // Relations
-  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  vehicle       Vehicle       @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-  transactions  Transaction[]
-  contract      Contract?
-
-  @@map("rentals")
-}
-
-model Sale {
-  id            String      @id @default(uuid())
-  userId        String      @map("user_id")
-  vehicleId     String      @map("vehicle_id")
-  salePrice     Decimal     @map("sale_price") 
-  status        SaleStatus  @default(PENDING)
-  paymentStatus PaymentStatus @map("payment_status") @default(PENDING)
-  paymentMethod String?     @map("payment_method")
-  contractSigned Boolean    @default(false) @map("contract_signed")
-  createdAt     DateTime    @default(now()) @map("created_at")
-  updatedAt     DateTime    @updatedAt @map("updated_at")
-
-  // Relations
-  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  vehicle       Vehicle     @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-  transactions  Transaction[]
-  contract      Contract?
-
-  @@map("sales")
-}
-
-model RentalPricing {
-  id            String   @id @default(uuid())
-  vehicleId     String   @map("vehicle_id")
-  pricePerDay   Decimal  @map("price_per_day") 
-  pricePerWeek  Decimal  @map("price_per_week") 
-  pricePerMonth Decimal  @map("price_per_month") 
-  validFrom     DateTime @map("valid_from") 
-  validTo       DateTime? @map("valid_to") 
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
-
-  // Relations
-  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-
-  @@map("rental_pricing")
-}
-
-model SalePricing {
-  id        String    @id @default(uuid())
-  vehicleId String    @map("vehicle_id")
-  salePrice Decimal   @map("sale_price") 
-  validFrom DateTime  @map("valid_from") 
-  validTo   DateTime? @map("valid_to") 
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
-
-  // Relations
-  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-
-  @@map("sale_pricing")
-}
-
-model PaymentMethod {
-  id                      String   @id @default(uuid())
-  userId                  String   @map("user_id")
-  gatewayProvider         String   @map("gateway_provider")
-  gatewayPaymentMethodId  String   @map("gateway_payment_method_id")
-  type                    String
-  cardBrand               String?  @map("card_brand")
-  cardLastFour            String?  @map("card_last_four")
-  cardExpMonth            Int?     @map("card_exp_month")
-  cardExpYear             Int?     @map("card_exp_year")
-  bankName                String?  @map("bank_name")
-  isDefault               Boolean  @default(false) @map("is_default")
-  isActive                Boolean  @default(true) @map("is_active")
-  metadata                String     @default("{}")
-  createdAt               DateTime @default(now()) @map("created_at")
-  updatedAt               DateTime @updatedAt @map("updated_at")
-
-  // Relations
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  transactions Transaction[]
-
-  @@map("payment_methods")
-}
-
-model Transaction {
-  id                      String          @id @default(uuid())
-  transactionId           String          @unique @map("transaction_id")
-  userId                  String          @map("user_id")
-  rentalId                String?         @map("rental_id")
-  saleId                  String?         @map("sale_id")
-  type                    TransactionType
-  status                  TransactionStatus @default(PENDING)
-  amount                  Decimal         
-  currency                String          @default("AUD")
-  gatewayProvider         String          @map("gateway_provider")
-  gatewayTransactionId    String?         @map("gateway_transaction_id")
-  gatewayPaymentIntentId  String?         @map("gateway_payment_intent_id")
-  gatewayChargeId         String?         @map("gateway_charge_id")
-  paymentMethodType       String?         @map("payment_method_type")
-  paymentMethodId         String?         @map("payment_method_id")
-  cardLastFour            String?         @map("card_last_four")
-  cardBrand               String?         @map("card_brand")
-  cardExpMonth            Int?            @map("card_exp_month")
-  cardExpYear             Int?            @map("card_exp_year")
-  subtotal                Decimal         
-  taxAmount               Decimal         @default(0) @map("tax_amount") 
-  processingFee           Decimal         @default(0) @map("processing_fee") 
-  totalAmount             Decimal         @map("total_amount") 
-  gatewayResponse         String?           @map("gateway_response")
-  gatewayMetadata         String?           @map("gateway_metadata")
-  failureReason           String?         @map("failure_reason")
-  failureCode             String?         @map("failure_code")
-  processedAt             DateTime?       @map("processed_at") 
-  createdAt               DateTime        @default(now()) @map("created_at")
-  updatedAt               DateTime        @updatedAt @map("updated_at")
-
-  // Relations
-  user                    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  rental                  Rental?         @relation(fields: [rentalId], references: [id])
-  sale                    Sale?           @relation(fields: [saleId], references: [id])
-  paymentMethod           PaymentMethod?  @relation(fields: [paymentMethodId], references: [id])
-  transactionHistory      TransactionHistory[]
-  refunds                 Refund[]
-
-  @@map("transactions")
-}
-
-model TransactionHistory {
-  id            String          @id @default(uuid())
-  transactionId String          @map("transaction_id")
-  status        TransactionStatus
-  amount        Decimal?        
-  gatewayResponse String?         @map("gateway_response")
-  notes         String?
-  createdBy     String?         @map("created_by")
-  createdAt     DateTime        @default(now()) @map("created_at")
-
-  // Relations
-  transaction   Transaction     @relation(fields: [transactionId], references: [id], onDelete: Cascade)
-
-  @@map("transaction_history")
-}
-
-model Refund {
-  id                String      @id @default(uuid())
-  transactionId     String      @map("transaction_id")
-  refundId          String      @unique @map("refund_id")
-  amount            Decimal     
-  reason            String
-  status            RefundStatus @default(PENDING)
-  gatewayRefundId   String?     @map("gateway_refund_id")
-  gatewayResponse   String?       @map("gateway_response")
-  failureReason     String?     @map("failure_reason")
-  requestedBy       String      @map("requested_by")
-  approvedBy        String?     @map("approved_by")
-  approvedAt        DateTime?   @map("approved_at") 
-  createdAt         DateTime    @default(now()) @map("created_at")
-  updatedAt         DateTime    @updatedAt @map("updated_at")
-
-  // Relations
-  transaction       Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
-  adminUser         AdminUser?  @relation(fields: [approvedBy], references: [id])
-
-  @@map("refunds")
-}
-
-model Contract {
-  id        String    @id @default(uuid())
-  rentalId  String?   @unique @map("rental_id")
-  saleId    String?   @unique @map("sale_id")
-  terms     String
-  signedAt  DateTime? @map("signed_at") 
-  signedBy  String    @map("signed_by")
-  filePath  String?   @map("file_path")
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
-
-  // Relations
-  rental    Rental?   @relation(fields: [rentalId], references: [id])
-  sale      Sale?     @relation(fields: [saleId], references: [id])
-  user      User      @relation(fields: [signedBy], references: [id])
-
-  @@map("contracts")
-}
-
-model CustomerAnalytics {
-  id                      String   @id @default(uuid())
-  userId                  String   @unique @map("user_id")
-  totalBookings           Int      @default(0) @map("total_bookings")
-  totalSpent              Decimal  @default(0) @map("total_spent") 
-  averageBookingValue     Decimal  @default(0) @map("average_booking_value") 
-  lastBookingDate         DateTime? @map("last_booking_date") 
-  customerLifetimeValue   Decimal  @default(0) @map("customer_lifetime_value") 
-  churnRiskScore          Decimal  @default(0) @map("churn_risk_score") 
-  createdAt               DateTime @default(now()) @map("created_at")
-  updatedAt               DateTime @updatedAt @map("updated_at")
-
-  // Relations
-  user                    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("customer_analytics")
-}
-
-model VehicleAnalytics {
-  id                        String   @id @default(uuid())
-  vehicleId                 String   @unique @map("vehicle_id")
-  utilizationRate           Decimal  @default(0) @map("utilization_rate") 
-  revenuePerDay             Decimal  @default(0) @map("revenue_per_day") 
-  maintenanceFrequency      Int      @default(0) @map("maintenance_frequency")
-  customerRatingAvg         Decimal  @default(0) @map("customer_rating_avg") 
-  bookingCancellationRate   Decimal  @default(0) @map("booking_cancellation_rate") 
-  createdAt                 DateTime @default(now()) @map("created_at")
-  updatedAt                 DateTime @updatedAt @map("updated_at")
-
-  // Relations
-  vehicle                   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-
-  @@map("vehicle_analytics")
-}
-
-model RevenueAnalytics {
-  id            String   @id @default(uuid())
-  date          DateTime 
-  rentalRevenue Decimal  @default(0) @map("rental_revenue") 
-  salesRevenue  Decimal  @default(0) @map("sales_revenue") 
-  totalRevenue  Decimal  @default(0) @map("total_revenue") 
-  vehicleId     String?  @map("vehicle_id")
-  locationId    String?  @map("location_id")
-  createdAt     DateTime @default(now()) @map("created_at")
-
-  // Relations
-  vehicle       Vehicle? @relation(fields: [vehicleId], references: [id])
-  location      VehicleLocation? @relation(fields: [locationId], references: [id])
-
-  @@map("revenue_analytics")
-}
-
-model FinancialAnalytics {
-  id                      String   @id @default(uuid())
-  date                    DateTime 
-  periodType              String   @map("period_type")
-  totalRevenue            Decimal  @default(0) @map("total_revenue") 
-  rentalRevenue           Decimal  @default(0) @map("rental_revenue") 
-  salesRevenue            Decimal  @default(0) @map("sales_revenue") 
-  refundAmount            Decimal  @default(0) @map("refund_amount") 
-  netRevenue              Decimal  @default(0) @map("net_revenue") 
-  totalTransactions       Int      @default(0) @map("total_transactions")
-  successfulTransactions  Int      @default(0) @map("successful_transactions")
-  failedTransactions      Int      @default(0) @map("failed_transactions")
-  refundedTransactions    Int      @default(0) @map("refunded_transactions")
-  cardPayments            Decimal  @default(0) @map("card_payments") 
-  bankTransferPayments    Decimal  @default(0) @map("bank_transfer_payments") 
-  bnplPayments            Decimal  @default(0) @map("bnpl_payments") 
-  totalProcessingFees     Decimal  @default(0) @map("total_processing_fees") 
-  stripeFees              Decimal  @default(0) @map("stripe_fees") 
-  createdAt               DateTime @default(now()) @map("created_at")
-
-  @@map("financial_analytics")
-}
-
-model Notification {
-  id        String           @id @default(uuid())
-  userId    String           @map("user_id")
-  type      NotificationType
-  title     String
-  message   String
-  isRead    Boolean          @default(false) @map("is_read")
-  createdAt DateTime         @default(now()) @map("created_at")
-
-  // Relations
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("notifications")
-}
-
-model AuditLog {
-  id        String   @id @default(uuid())
-  userId    String?  @map("user_id")
-  adminId   String?  @map("admin_id")
-  action    String
-  entity    String
-  entityId  String   @map("entity_id")
-  details   String
-  createdAt DateTime @default(now()) @map("created_at")
-
-  // Relations
-  user      User?      @relation(fields: [userId], references: [id])
-  adminUser AdminUser? @relation(fields: [adminId], references: [id])
-
-  @@map("audit_logs")
 }
